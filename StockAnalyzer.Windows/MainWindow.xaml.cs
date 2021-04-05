@@ -33,7 +33,7 @@ namespace StockAnalyzer.Windows
 
             var loadLinesTask = Task.Run(() =>
             {
-                var lines = File.ReadAllLines(@"C:\Users\qing.ma\Projects\StockAnalyzer\StockAnalyzer.Web\StockPrices_Small.csv");
+                var lines = File.ReadAllLines(@"C:\Users\qing.ma\Projects\StockAnalyzer\StockAnalyzer.Web\AStockPrices_Small.csv");
 
                 return lines;
             });
@@ -66,7 +66,15 @@ namespace StockAnalyzer.Windows
                     // return back to Thread
                     Stocks.ItemsSource = data.Where(price => price.Ticker == Ticker.Text);
                 });
-            });
+            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+
+            loadLinesTask.ContinueWith(t =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    Notes.Text = t.Exception.InnerException.Message;
+                });
+            }, TaskContinuationOptions.OnlyOnFaulted);
 
             processStocksTask.ContinueWith(_ =>
             {
