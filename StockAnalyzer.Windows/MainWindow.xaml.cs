@@ -20,6 +20,7 @@ namespace StockAnalyzer.Windows
 
         private async void Search_Click(object sender, RoutedEventArgs e)
         {
+            // async void is evil, the only case to use is for event handlers
             #region Before loading stock data
             var watch = new Stopwatch();
             watch.Start();
@@ -27,7 +28,29 @@ namespace StockAnalyzer.Windows
             StockProgress.IsIndeterminate = true;
             #endregion
 
-            using (var client = new HttpClient()) 
+            await GetStocks();
+
+            #region After stock data is loaded
+            StocksStatus.Text = $"Loaded stocks for {Ticker.Text} in {watch.ElapsedMilliseconds}ms";
+            StockProgress.Visibility = Visibility.Hidden;
+            #endregion
+        }
+
+        private void Hyperlink_OnRequestNavigate(object sender, RequestNavigateEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri));
+
+            e.Handled = true;
+        }
+
+        private void Close_OnClick(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        public async Task GetStocks()
+        {
+            using (var client = new HttpClient())
             {
                 var response = await client.GetAsync($"http://localhost:61363/api/stocks/{Ticker.Text}");
                 // await gives you a potential result
@@ -47,23 +70,6 @@ namespace StockAnalyzer.Windows
                     Notes.Text += ex.Message;
                 }
             }
-
-            #region After stock data is loaded
-            StocksStatus.Text = $"Loaded stocks for {Ticker.Text} in {watch.ElapsedMilliseconds}ms";
-            StockProgress.Visibility = Visibility.Hidden;
-            #endregion
-        }
-
-        private void Hyperlink_OnRequestNavigate(object sender, RequestNavigateEventArgs e)
-        {
-            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri));
-
-            e.Handled = true;
-        }
-
-        private void Close_OnClick(object sender, RoutedEventArgs e)
-        {
-            Application.Current.Shutdown();
         }
     }
 }
