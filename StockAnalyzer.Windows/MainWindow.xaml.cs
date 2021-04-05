@@ -31,27 +31,33 @@ namespace StockAnalyzer.Windows
             StockProgress.IsIndeterminate = true;
             #endregion
 
-            var lines = File.ReadAllLines(@"C:\Users\qing.ma\Projects\StockAnalyzer\StockAnalyzer.Web\StockPrices_Small.csv");
-
-            var data = new List<StockPrice>();
-
-            foreach (var line in lines.Skip(1))
+            await Task.Run(() =>
             {
-                var segments = line.Split(',');
+                var lines = File.ReadAllLines(@"C:\Users\qing.ma\Projects\StockAnalyzer\StockAnalyzer.Web\StockPrices_Small.csv");
 
-                for (var i = 0; i < segments.Length; i++) segments[i] = segments[i].Trim('\'', '"');
-                var price = new StockPrice
+                var data = new List<StockPrice>();
+
+                foreach (var line in lines.Skip(1))
                 {
-                    Ticker = segments[0],
-                    TradeDate = DateTime.ParseExact(segments[1], "M/d/yyyy h:mm:ss tt", CultureInfo.InvariantCulture),
-                    Volume = Convert.ToInt32(segments[6], CultureInfo.InvariantCulture),
-                    Change = Convert.ToDecimal(segments[7], CultureInfo.InvariantCulture),
-                    ChangePercent = Convert.ToDecimal(segments[8], CultureInfo.InvariantCulture),
-                };
-                data.Add(price);
-            }
+                    var segments = line.Split(',');
 
-            Stocks.ItemsSource = data.Where(price => price.Ticker == Ticker.Text);
+                    for (var i = 0; i < segments.Length; i++) segments[i] = segments[i].Trim('\'', '"');
+                    var price = new StockPrice
+                    {
+                        Ticker = segments[0],
+                        TradeDate = DateTime.ParseExact(segments[1], "M/d/yyyy h:mm:ss tt", CultureInfo.InvariantCulture),
+                        Volume = Convert.ToInt32(segments[6], CultureInfo.InvariantCulture),
+                        Change = Convert.ToDecimal(segments[7], CultureInfo.InvariantCulture),
+                        ChangePercent = Convert.ToDecimal(segments[8], CultureInfo.InvariantCulture),
+                    };
+                    data.Add(price);
+                }
+
+                Dispatcher.Invoke(() =>
+                {
+                    Stocks.ItemsSource = data.Where(price => price.Ticker == Ticker.Text);
+                });
+            });
 
             #region After stock data is loaded
             StocksStatus.Text = $"Loaded stocks for {Ticker.Text} in {watch.ElapsedMilliseconds}ms";
