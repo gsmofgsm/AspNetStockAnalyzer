@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -28,15 +31,27 @@ namespace StockAnalyzer.Windows
             StockProgress.IsIndeterminate = true;
             #endregion
 
-            try
-            {
-                await GetStocks();
-            }
-            catch (Exception ex)
-            {
+            var lines = File.ReadAllLines(@"C:\Users\qing.ma\Projects\StockAnalyzer\StockAnalyzer.Web\StockPrices_Small.csv");
 
-                Notes.Text += ex.Message;
+            var data = new List<StockPrice>();
+
+            foreach (var line in lines.Skip(1))
+            {
+                var segments = line.Split(',');
+
+                for (var i = 0; i < segments.Length; i++) segments[i] = segments[i].Trim('\'', '"');
+                var price = new StockPrice
+                {
+                    Ticker = segments[0],
+                    TradeDate = DateTime.ParseExact(segments[1], "M/d/yyyy h:mm:ss tt", CultureInfo.InvariantCulture),
+                    Volume = Convert.ToInt32(segments[6], CultureInfo.InvariantCulture),
+                    Change = Convert.ToDecimal(segments[7], CultureInfo.InvariantCulture),
+                    ChangePercent = Convert.ToDecimal(segments[8], CultureInfo.InvariantCulture),
+                };
+                data.Add(price);
             }
+
+            Stocks.ItemsSource = data.Where(price => price.Ticker == Ticker.Text);
 
             #region After stock data is loaded
             StocksStatus.Text = $"Loaded stocks for {Ticker.Text} in {watch.ElapsedMilliseconds}ms";
