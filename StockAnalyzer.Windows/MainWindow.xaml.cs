@@ -30,12 +30,22 @@ namespace StockAnalyzer.Windows
             using (var client = new HttpClient()) 
             {
                 var response = await client.GetAsync($"http://localhost:61363/api/stocks/{Ticker.Text}");
+                // await gives you a potential result
+                try
+                {
+                    response.EnsureSuccessStatusCode(); // await validates the success of the operation
 
-                var content = await response.Content.ReadAsStringAsync();
+                    var content = await response.Content.ReadAsStringAsync();
 
-                var data = JsonConvert.DeserializeObject<IEnumerable<StockPrice>>(content);
+                    var data = JsonConvert.DeserializeObject<IEnumerable<StockPrice>>(content);
 
-                Stocks.ItemsSource = data;
+                    Stocks.ItemsSource = data;
+                }
+                catch (Exception ex)
+                {
+                    // continuation is back on calling thread
+                    Notes.Text += ex.Message;
+                }
             }
 
             #region After stock data is loaded
