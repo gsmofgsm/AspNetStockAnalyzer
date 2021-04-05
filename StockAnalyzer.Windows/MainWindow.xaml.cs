@@ -21,7 +21,7 @@ namespace StockAnalyzer.Windows
             InitializeComponent();
         }
 
-        private async void Search_Click(object sender, RoutedEventArgs e)
+        private void Search_Click(object sender, RoutedEventArgs e)
         {
             // async void is evil, the only case to use is for event handlers
             #region Before loading stock data
@@ -31,9 +31,17 @@ namespace StockAnalyzer.Windows
             StockProgress.IsIndeterminate = true;
             #endregion
 
-            await Task.Run(() =>
+            var loadLinesTask = Task.Run(() =>
             {
                 var lines = File.ReadAllLines(@"C:\Users\qing.ma\Projects\StockAnalyzer\StockAnalyzer.Web\StockPrices_Small.csv");
+
+                return lines;
+            });
+
+            // Continuation
+            var processStocksTask = loadLinesTask.ContinueWith(t =>
+            {
+                var lines = t.Result; // After a task is awaited, you can get its Result
 
                 var data = new List<StockPrice>();
 
@@ -55,14 +63,23 @@ namespace StockAnalyzer.Windows
 
                 Dispatcher.Invoke(() =>
                 {
+                    // return back to Thread
                     Stocks.ItemsSource = data.Where(price => price.Ticker == Ticker.Text);
                 });
             });
 
-            #region After stock data is loaded
-            StocksStatus.Text = $"Loaded stocks for {Ticker.Text} in {watch.ElapsedMilliseconds}ms";
-            StockProgress.Visibility = Visibility.Hidden;
-            #endregion
+            processStocksTask.ContinueWith(_ =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    // return back to Thread
+                    #region After stock data is loaded
+                    StocksStatus.Text = $"Loaded stocks for {Ticker.Text} in {watch.ElapsedMilliseconds}ms";
+                    StockProgress.Visibility = Visibility.Hidden;
+                    #endregion
+                });
+            });
+
         }
 
         private void Hyperlink_OnRequestNavigate(object sender, RequestNavigateEventArgs e)
