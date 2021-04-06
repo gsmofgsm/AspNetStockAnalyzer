@@ -42,22 +42,7 @@ namespace StockAnalyzer.Windows
             }
 
             cancellationTokenSource = new CancellationTokenSource();
-
-            var loadLinesTask = Task.Run(async () =>
-            {
-                var lines = new List<string>();
-
-                using (var stream = new StreamReader(File.OpenRead(@"C:\Users\qing.ma\Projects\StockAnalyzer\StockAnalyzer.Web\StockPrices_Small.csv")))
-                {
-                    string line;
-                    while ((line = await stream.ReadLineAsync()) != null)
-                    {
-                        lines.Add(line);
-                    }
-                }
-
-                return lines;
-            });
+            var loadLinesTask = SearchForStocks();
 
             // Continuation
             var processStocksTask = loadLinesTask.ContinueWith(t =>
@@ -109,6 +94,25 @@ namespace StockAnalyzer.Windows
                 });
             });
 
+        }
+
+        private Task<List<string>> SearchForStocks()
+        {
+            return Task.Run(async () =>
+            {
+                var lines = new List<string>();
+
+                using (var stream = new StreamReader(File.OpenRead(@"C:\Users\qing.ma\Projects\StockAnalyzer\StockAnalyzer.Web\StockPrices_Small.csv")))
+                {
+                    string line;
+                    while ((line = await stream.ReadLineAsync()) != null)
+                    {
+                        lines.Add(line);
+                    }
+                }
+
+                return lines;
+            });
         }
 
         private void Hyperlink_OnRequestNavigate(object sender, RequestNavigateEventArgs e)
