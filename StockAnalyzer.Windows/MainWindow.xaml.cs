@@ -62,10 +62,22 @@ namespace StockAnalyzer.Windows
                     tickerLoadingTasks.Add(loadTask);
                 }
 
-                var allStocks = await Task.WhenAll(tickerLoadingTasks);
+                var timeoutTask = Task.Delay(2000);
+                var allStocksLoadingTask = Task.WhenAll(tickerLoadingTasks);
                 // await will ensure that if any of the tasks failed within WhenAll or WhenAny
                 // the exception will be propagated back to the calling context
-                Stocks.ItemsSource = allStocks.SelectMany(stocks => stocks);
+
+                var completedTask = await Task.WhenAny(timeoutTask, allStocksLoadingTask);
+
+                if (completedTask == timeoutTask)
+                {
+                    cancellationTokenSource.Cancel();
+                    cancellationTokenSource = null;
+                    throw new Exception("Timeout!");
+                }
+
+                Stocks.ItemsSource = allStocksLoadingTask.Result.SelectMany(stocks => stocks);
+                // .Result is only appropriate after the task has been awaited!
                 // SelectMany to flatten list of IEnumerable to IEnumerable
             }
             catch (Exception ex)
