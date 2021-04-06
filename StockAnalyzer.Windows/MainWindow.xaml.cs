@@ -42,6 +42,12 @@ namespace StockAnalyzer.Windows
             }
 
             cancellationTokenSource = new CancellationTokenSource();
+
+            cancellationTokenSource.Token.Register(() =>
+            {
+                Notes.Text = "Cancellation requested";
+            });
+
             var loadLinesTask = SearchForStocks(cancellationTokenSource.Token);
 
             // Continuation
@@ -72,7 +78,10 @@ namespace StockAnalyzer.Windows
                     // return back to Thread
                     Stocks.ItemsSource = data.Where(price => price.Ticker == Ticker.Text);
                 });
-            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+            }, 
+            cancellationTokenSource.Token,
+            TaskContinuationOptions.OnlyOnRanToCompletion,
+            TaskScheduler.Current);
 
             loadLinesTask.ContinueWith(t =>
             {
@@ -107,6 +116,11 @@ namespace StockAnalyzer.Windows
                     string line;
                     while ((line = await stream.ReadLineAsync()) != null)
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            return lines;
+                        }
+
                         lines.Add(line);
                     }
                 }
