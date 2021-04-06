@@ -42,7 +42,7 @@ namespace StockAnalyzer.Windows
             }
 
             cancellationTokenSource = new CancellationTokenSource();
-            var loadLinesTask = SearchForStocks();
+            var loadLinesTask = SearchForStocks(cancellationTokenSource.Token);
 
             // Continuation
             var processStocksTask = loadLinesTask.ContinueWith(t =>
@@ -96,7 +96,7 @@ namespace StockAnalyzer.Windows
 
         }
 
-        private Task<List<string>> SearchForStocks()
+        private Task<List<string>> SearchForStocks(CancellationToken cancellationToken)
         {
             return Task.Run(async () =>
             {
@@ -112,7 +112,7 @@ namespace StockAnalyzer.Windows
                 }
 
                 return lines;
-            });
+            }, cancellationToken);
         }
 
         private void Hyperlink_OnRequestNavigate(object sender, RequestNavigateEventArgs e)
