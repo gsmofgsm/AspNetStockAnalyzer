@@ -12,6 +12,7 @@ using System.Windows;
 using System.Windows.Navigation;
 using Newtonsoft.Json;
 using StockAnalyzer.Core.Domain;
+using StockAnalyzer.Windows.Services;
 
 namespace StockAnalyzer.Windows
 {
@@ -24,7 +25,7 @@ namespace StockAnalyzer.Windows
 
         CancellationTokenSource cancellationTokenSource = null;
 
-        private void Search_Click(object sender, RoutedEventArgs e)
+        private async void Search_Click(object sender, RoutedEventArgs e)
         {
             // async void is evil, the only case to use is for event handlers
             #region Before loading stock data
@@ -48,60 +49,22 @@ namespace StockAnalyzer.Windows
                 Notes.Text = "Cancellation requested";
             });
 
-            var loadLinesTask = SearchForStocks(cancellationTokenSource.Token);
-
-            // Continuation
-            var processStocksTask = loadLinesTask.ContinueWith(t =>
+            try
             {
-                var lines = t.Result; // After a task is awaited, you can get its Result
+                var service = new StockService();
+                var data = await service.GetStockPricesFor(Ticker.Text, cancellationTokenSource.Token);
 
-                var data = new List<StockPrice>();
-
-                foreach (var line in lines.Skip(1))
-                {
-                    var segments = line.Split(',');
-
-                    for (var i = 0; i < segments.Length; i++) segments[i] = segments[i].Trim('\'', '"');
-                    var price = new StockPrice
-                    {
-                        Ticker = segments[0],
-                        TradeDate = DateTime.ParseExact(segments[1], "M/d/yyyy h:mm:ss tt", CultureInfo.InvariantCulture),
-                        Volume = Convert.ToInt32(segments[6], CultureInfo.InvariantCulture),
-                        Change = Convert.ToDecimal(segments[7], CultureInfo.InvariantCulture),
-                        ChangePercent = Convert.ToDecimal(segments[8], CultureInfo.InvariantCulture),
-                    };
-                    data.Add(price);
-                }
-
-                Dispatcher.Invoke(() =>
-                {
-                    // return back to Thread
-                    Stocks.ItemsSource = data.Where(price => price.Ticker == Ticker.Text);
-                });
-            }, 
-            cancellationTokenSource.Token,
-            TaskContinuationOptions.OnlyOnRanToCompletion,
-            TaskScheduler.Current);
-
-            loadLinesTask.ContinueWith(t =>
+                Stocks.ItemsSource = data;
+            }
+            catch (Exception ex)
             {
-                Dispatcher.Invoke(() =>
-                {
-                    Notes.Text = t.Exception.InnerException.Message;
-                });
-            }, TaskContinuationOptions.OnlyOnFaulted);
+                Notes.Text = ex.Message;
+            }
 
-            processStocksTask.ContinueWith(_ =>
-            {
-                Dispatcher.Invoke(() =>
-                {
-                    // return back to Thread
-                    #region After stock data is loaded
-                    StocksStatus.Text = $"Loaded stocks for {Ticker.Text} in {watch.ElapsedMilliseconds}ms";
-                    StockProgress.Visibility = Visibility.Hidden;
-                    #endregion
-                });
-            });
+            #region After stock data is loaded
+            StocksStatus.Text = $"Loaded stocks for {Ticker.Text} in {watch.ElapsedMilliseconds}ms";
+            StockProgress.Visibility = Visibility.Hidden;
+            #endregion
 
         }
 
