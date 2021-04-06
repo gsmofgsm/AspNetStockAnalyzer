@@ -53,7 +53,7 @@ namespace StockAnalyzer.Windows
             {
                 var tickers = Ticker.Text.Split(',', ' ');
                 
-                var service = new StockService();
+                var service = new MockStockService();
 
                 var tickerLoadingTasks = new List<Task<IEnumerable<StockPrice>>>();
                 foreach (var ticker in tickers)
@@ -62,6 +62,7 @@ namespace StockAnalyzer.Windows
                     tickerLoadingTasks.Add(loadTask);
                 }
 
+                #region Handling Timeout
                 var timeoutTask = Task.Delay(2000);
                 var allStocksLoadingTask = Task.WhenAll(tickerLoadingTasks);
                 // await will ensure that if any of the tasks failed within WhenAll or WhenAny
@@ -75,6 +76,7 @@ namespace StockAnalyzer.Windows
                     cancellationTokenSource = null;
                     throw new Exception("Timeout!");
                 }
+                #endregion
 
                 Stocks.ItemsSource = allStocksLoadingTask.Result.SelectMany(stocks => stocks);
                 // .Result is only appropriate after the task has been awaited!
