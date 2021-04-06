@@ -51,10 +51,22 @@ namespace StockAnalyzer.Windows
 
             try
             {
+                var tickers = Ticker.Text.Split(',', ' ');
+                
                 var service = new StockService();
-                var data = await service.GetStockPricesFor(Ticker.Text, cancellationTokenSource.Token);
 
-                Stocks.ItemsSource = data;
+                var tickerLoadingTasks = new List<Task<IEnumerable<StockPrice>>>();
+                foreach (var ticker in tickers)
+                {
+                    var loadTask = service.GetStockPricesFor(ticker, cancellationTokenSource.Token);
+                    tickerLoadingTasks.Add(loadTask);
+                }
+
+                var allStocks = await Task.WhenAll(tickerLoadingTasks);
+                // await will ensure that if any of the tasks failed within WhenAll or WhenAny
+                // the exception will be propagated back to the calling context
+                Stocks.ItemsSource = allStocks.SelectMany(stocks => stocks);
+                // SelectMany to flatten list of IEnumerable to IEnumerable
             }
             catch (Exception ex)
             {
