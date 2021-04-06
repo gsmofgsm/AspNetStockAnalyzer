@@ -43,9 +43,18 @@ namespace StockAnalyzer.Windows
 
             cancellationTokenSource = new CancellationTokenSource();
 
-            var loadLinesTask = Task.Run(() =>
+            var loadLinesTask = Task.Run(async () =>
             {
-                var lines = File.ReadAllLines(@"C:\Users\qing.ma\Projects\StockAnalyzer\StockAnalyzer.Web\StockPrices_Small.csv");
+                var lines = new List<string>();
+
+                using (var stream = new StreamReader(File.OpenRead(@"C:\Users\qing.ma\Projects\StockAnalyzer\StockAnalyzer.Web\StockPrices_Small.csv")))
+                {
+                    string line;
+                    while ((line = await stream.ReadLineAsync()) != null)
+                    {
+                        lines.Add(line);
+                    }
+                }
 
                 return lines;
             });
