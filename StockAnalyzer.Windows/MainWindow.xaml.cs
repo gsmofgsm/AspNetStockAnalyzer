@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Navigation;
@@ -21,6 +22,8 @@ namespace StockAnalyzer.Windows
             InitializeComponent();
         }
 
+        CancellationTokenSource cancellationTokenSource = null;
+
         private void Search_Click(object sender, RoutedEventArgs e)
         {
             // async void is evil, the only case to use is for event handlers
@@ -31,9 +34,18 @@ namespace StockAnalyzer.Windows
             StockProgress.IsIndeterminate = true;
             #endregion
 
+            if (cancellationTokenSource != null)
+            {
+                cancellationTokenSource.Cancel();
+                cancellationTokenSource = null;
+                return;
+            }
+
+            cancellationTokenSource = new CancellationTokenSource();
+
             var loadLinesTask = Task.Run(() =>
             {
-                var lines = File.ReadAllLines(@"C:\Users\qing.ma\Projects\StockAnalyzer\StockAnalyzer.Web\AStockPrices_Small.csv");
+                var lines = File.ReadAllLines(@"C:\Users\qing.ma\Projects\StockAnalyzer\StockAnalyzer.Web\StockPrices_Small.csv");
 
                 return lines;
             });
