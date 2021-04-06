@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -53,12 +54,23 @@ namespace StockAnalyzer.Windows
             {
                 var tickers = Ticker.Text.Split(',', ' ');
                 
-                var service = new MockStockService();
+                var service = new StockService();
+                var stocks = new ConcurrentBag<StockPrice>();  // thread safe vs List<StorePrice>
 
                 var tickerLoadingTasks = new List<Task<IEnumerable<StockPrice>>>();
                 foreach (var ticker in tickers)
                 {
-                    var loadTask = service.GetStockPricesFor(ticker, cancellationTokenSource.Token);
+                    var loadTask = service.GetStockPricesFor(ticker, cancellationTokenSource.Token)
+                        .ContinueWith(t => {
+                            foreach (var stock in t.Result.Take(5)) stocks.Add(stock);
+
+                            Dispatcher.Invoke(() =>
+                            {
+                                Stocks.ItemsSource = stocks.ToArray();
+                            });
+
+                            return t.Result;
+                        });
                     tickerLoadingTasks.Add(loadTask);
                 }
 
@@ -78,7 +90,6 @@ namespace StockAnalyzer.Windows
                 }
                 #endregion
 
-                Stocks.ItemsSource = allStocksLoadingTask.Result.SelectMany(stocks => stocks);
                 // .Result is only appropriate after the task has been awaited!
                 // SelectMany to flatten list of IEnumerable to IEnumerable
             }
